@@ -4,8 +4,8 @@
 - base64はURLSAFE(-_)なので payload 内に '/' が出ない
 - 全ての $ は \$ にエスケープして L1 展開を回避し、eval(=hw.shレベル)で展開させる
 """
-import base64, os, sys, time
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import base64, sys, time
+sys.path.insert(0, "/Users/nharu/nharu-0630/meural-mc321/tools")
 from rtc_shell2 import rtc
 
 ESC = "\\$"
@@ -22,7 +22,7 @@ def co(*parts):
 DECODE_CODE = ("import base64,sys;fd=open(sys.argv[2],chr(119)+chr(98));"
                "fd.write(base64.urlsafe_b64decode(open(sys.argv[1]).read()))")
 
-def push_file(local_path, remote_path_str, chunk=4800, verbose=True):
+def push_file(local_path, remote_path_str, chunk=2000, verbose=True):
     """remote_path_str は sl()で組み立て済みの文字列."""
     data = base64.urlsafe_b64encode(open(local_path, "rb").read()).decode()
     chunks = [data[i:i + chunk] for i in range(0, len(data), chunk)]

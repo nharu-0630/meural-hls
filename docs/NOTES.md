@@ -44,6 +44,11 @@ painful way:
 - The URL goes through **double decoding**: every literal `/` must be written
   as `$(printf '\057')` and every `:` as `$(printf '\072')` (helpers `sl()` /
   `co()` in `push_files.py`), otherwise requests 404/400 out.
+- There is a request-size limit in front of the PHP layer: base64url chunk PUTs
+  above ~4 KB get **HTTP 403 with an HTML page and are silently dropped**
+  (a file later materializes as 0 bytes). Keep base64url chunks at ≤ 2000
+  bytes (the default in `push_files.py`) and always verify the transferred
+  md5/size.
 - Bare `$()` / `${}` in the payload are consumed by the first decode level;
   escape **all** `$` as `\$` so they expand at the eval level.
 - `%s` anywhere in a payload → HTTP 400. Payload length ≤ ~4 KB.
@@ -89,8 +94,14 @@ delta / time == fps). This is the cheapest end-to-end sync probe.
   at 250 kbps / ultrafast you get pictures full of 16x16 blocks. (Those blocks
   were encoder quantization — the earlier "corruption" in transit had been
   fixed separately.)
+- **SUPERFAST preset for real sources**: with `-re` pacing a remote HLS input
+  and 24 fps content downsampled to 15 fps, `veryfast` runs at ~0.95x realtime
+  (slow creep behind live). `superfast` keeps up. For pure content-generation
+  sources (gradients) `veryfast` is fine.
 - **Close-aware pushing**: never POST the segment ffmpeg is still writing —
   the pusher always excludes the newest file, then deletes pushed files.
+  Files under 4 KB (opened but not yet written) are skipped and, once a later
+  healthy segment proves them dead, dropped without blocking the counter.
 - **ffmpeg 9.x drawbox quirk**: the `t` timestamp variable is stuck at 0
   inside drawbox expressions (both as `-vf` and inside a lavfi input graph).
   The `n` variable is not available at all. Use filters that animate by design
@@ -103,10 +114,13 @@ delta / time == fps). This is the cheapest end-to-end sync probe.
 - `/seg?n=N` stores the body and appends it to every registered `/live.ts`
   client queue under one lock — registration (snapshot of last 3 segments +
   queue append) is atomic, so there are no gaps or duplicates.
-- **Real-time paced drip**: each segment is written in 1 KB chunks sleeping
-  `2.0*1024/len(seg)` seconds per chunk — i.e. the segment is spread over its
-  real 2-second duration. This auto-follows the source bitrate; a fixed-rate
-  drip leaves ~1.4 s holes for low-bitrate sources and the player starves.
+- **Real-time paced drip** (`device/ingest.py`): each segment is written in 1 KB
+  chunks sleeping `gap*1024/len(seg)` seconds per chunk, where `gap` is the
+  **measured arrival interval** of that segment (fallback 2.0 s). The outgoing
+  stream therefore follows the *producer's* real-time exactly — even if ffmpeg
+  runs at 0.9x realtime fetching a remote HLS source, there are no holes for
+  the player. (A fixed nominal 2 s pace leaves ~0.1 s holes per segment and
+  drains the cache over minutes.)
 - Playlist `/live.m3u8` is served for debugging; playback goes through the
   endless `/live.ts`, not HLS.
 

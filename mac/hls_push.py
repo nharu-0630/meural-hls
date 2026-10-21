@@ -32,7 +32,7 @@ def build_ffmpeg():
             "drawbox=x=0:y=0:w=1920:h=1080:color=white@0.85:t=6,",
         ]
     ffmpeg += [
-        "-c:v", "libx264", "-preset", "veryfast",
+        "-c:v", "libx264", "-preset", "superfast",
         "-pix_fmt", "yuv420p", "-b:v", "2000k", "-g", "30",
         "-an",
         "-f", "segment", "-segment_time", "2", "-segment_format", "mpegts",
@@ -71,6 +71,14 @@ def main():
                 for n in range(pushed + 1, latest):
                     p = f"{WORK}/seg{n:06d}.ts"
                     if not os.path.exists(p):
+                        continue
+                    if os.path.getsize(p) < 4096:
+                        # 実体が書かれていない空ファイル。後続に健全なセグメントが出ていれば
+                        # 失われた内容とみなして諦めて進む (詰まり防止)
+                        nxt = f"{WORK}/seg{n+1:06d}.ts"
+                        if n + 1 < latest and os.path.exists(nxt) and os.path.getsize(nxt) > 4096:
+                            os.unlink(p)
+                            pushed = n
                         continue
                     data = open(p, "rb").read()
                     if post(f"http://{DEV}:{PORT}/seg?n={n}", data):
