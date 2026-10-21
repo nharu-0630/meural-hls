@@ -1,5 +1,7 @@
 # meural-hls (日本語)
 
+[English](README.md) | 日本語
+
 **Meural Canvas (MC321) の画面いっぱいにライブ動画を表示する — Macから配信、端末のディスク書込みゼロ、クラウド不使用、ファーム無改変。**
 
 Macが映像ソース (実HLSの `.m3u8` URL、または内蔵のアニメデモ) を2秒区切りのMPEG-TSセグメントにエンコードし、HTTPで端末内の小さなingestサーバへ投入します。サーバはセグメントを**端末のRAM上のみ**に保持し (フラッシュには何も書かない)、端末の純正 `mplayer` が `http://127.0.0.1:8484/live.ts` のシームレスな無限TSストリームをフレームバッファ (`/dev/fb0`) にネイティブ1920x1080で描画し続けます。watchdogが自動復旧を担います。
@@ -40,6 +42,7 @@ device/                  端末側 (すべてRAM上で動作)
   ingest.py              :8484 のHTTPサーバ — セグメントをメモリ保持し /live.ts を配信
   watch.sh               mplayer watchdog (死んだら~2秒で自動再起動)
 docs/NOTES.md            ハード/設計メモ: 罠と、各オプションをそう定めた理由
+docs/NOTES.ja.md         同上 (日本語版)
 ```
 
 ## クイックスタート
@@ -148,7 +151,7 @@ python3 mac/hls_push.py        # Mac pusher (実HLSなら HLS_URL=...)
 | rtc payloadが HTTP 500 | payloadにリテラル `/` や裸の `$()` がある — `push_files.py` のヘルパを使う |
 | watchdogが再起動ループ | 先に停止: `pkill -f 'watch[.]sh'`、次に `pkill -9 -f 'mplaye[r]'` (別コマンドで実行) |
 
-ハード固有の発見事項の全リストは **docs/NOTES.md**。
+ハード固有の発見事項の全リストは **docs/NOTES.ja.md** (英語版は docs/NOTES.md)。
 
 ## 免責
 

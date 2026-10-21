@@ -1,5 +1,7 @@
 # meural-hls
 
+English | [日本語](README.ja.md)
+
 **Full-screen live video on a Meural Canvas (MC321) — fed from your Mac, zero disk writes on the device, no cloud, no firmware modification.**
 
 A Mac encodes any video source (a real HLS `.m3u8` URL, or a built-in animated demo) into 2-second MPEG-TS segments and pushes them over plain HTTP into a tiny ingest server running **in the device's RAM (tmpfs-style: nothing is written to flash)**. A stock `mplayer` on the device plays a seamless endless MPEG-TS stream (`http://127.0.0.1:8484/live.ts`) straight into the framebuffer (`/dev/fb0`) at the panel's native 1920x1080, with a watchdog keeping it alive.
@@ -40,6 +42,7 @@ device/                  Device-side components (run entirely from RAM)
   ingest.py              HTTP server on :8484 — holds segments in memory, serves /live.ts
   watch.sh               mplayer watchdog (restarts the player within ~2 s if it dies)
 docs/NOTES.md            Hardware/design notes: gotchas, quirks, and why each option is set
+docs/NOTES.ja.md         同上 (Japanese version)
 ```
 
 To use your own gallery id, set `MEURAL_GALLERY_ID` (see `/remote/get_galleries_json` via `meural_api.galleries()`).
@@ -152,7 +155,7 @@ RAM-only is the recommended, least-invasive configuration.
 | `HTTP 500` from rtc payloads | Payload contains a literal `/` or bare `$()` — use the escaping helpers in `push_files.py` |
 | Watchdog relaunch loop | Stop it first: `pkill -f 'watch[.]sh'`, then `pkill -9 -f 'mplaye[r]'` (separate commands — the watchdog would otherwise restart the player) |
 
-See **docs/NOTES.md** for the full list of hardware quirks discovered along the way.
+See **docs/NOTES.md** for the full list of hardware quirks discovered along the way (Japanese version: **docs/NOTES.ja.md**).
 
 ## Disclaimer
 
