@@ -4,8 +4,8 @@
 - base64はURLSAFE(-_)なので payload 内に '/' が出ない
 - 全ての $ は \$ にエスケープして L1 展開を回避し、eval(=hw.shレベル)で展開させる
 """
-import base64, sys, time
-sys.path.insert(0, "/Users/nharu/nharu-0630/meural-mc321/tools")
+import base64, os, sys, time
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from rtc_shell2 import rtc
 
 ESC = "\\$"

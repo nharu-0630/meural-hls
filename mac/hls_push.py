@@ -6,7 +6,7 @@ POST する。セグメントは全て端末のメモリ (python バッファ) �
 """
 import os, re, subprocess, sys, time, urllib.request
 
-DEV = "192.0.2.10"
+DEV = os.environ.get("MEURAL_HOST", "192.0.2.10")
 PORT = 8484
 WORK = "/tmp/hlslive"
 
