@@ -14,15 +14,16 @@ After this, start the Mac-side pusher (separate terminal):
 Environment:
   MEURAL_HOST   device IP (default: placeholder 192.0.2.10 - set yours)
 """
+
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from rtc_shell2 import rtc            # noqa: E402
-from push_files import push_file, sl  # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from mac.push_files import push_file, sl  # noqa: E402
+from mac.rtc_shell2 import rtc  # noqa: E402
 
 
-def main():
+def main() -> None:
     here = os.path.dirname(os.path.abspath(__file__))
     dev = os.path.abspath(os.path.join(here, "..", "device"))
 
@@ -37,7 +38,13 @@ def main():
     rtc(";pkill -9 -f 'mplaye[r]'; pkill -f 'ingest[.]py'; sleep 1")
 
     print("starting ingest server (8484, RAM only) ...")
-    rtc(";setsid nohup python3 " + ingest + " >" + sl("tmp", "ingest.log") + " 2>&1 & sleep 2")
+    rtc(
+        ";setsid nohup python3 "
+        + ingest
+        + " >"
+        + sl("tmp", "ingest.log")
+        + " 2>&1 & sleep 2"
+    )
 
     print("starting mplayer watchdog ...")
     rtc(";setsid nohup sh " + watch + " >" + sl("dev", "null") + " 2>&1 & sleep 3")

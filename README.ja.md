@@ -49,20 +49,21 @@ docs/NOTES.ja.md         同上 (日本語版)
 
 必要環境:
 
-- **Mac** (Linux/BSDでも可): Python 3、libx264入りの `ffmpeg`
+- **Mac** (Linux/BSDでも可): Python 3.11以降、[uv](https://docs.astral.sh/uv/)、libx264入りの `ffmpeg`
 - **端末**: 同一LAN上の Meural Canvas MC321、純正ファーム (ローカル `http://<端末IP>/remote/...` APIが有効)
 
 ```bash
+uv sync --locked
 export MEURAL_HOST=<端末のIP>
 
 # 1) 一回だけ導入 (数KBのpythonを端末RAMへ投入してサービス起動)
-python3 mac/deploy_live.py
+uv run python mac/deploy_live.py
 
 # 2) Macのpusherを起動 — 内蔵アニメデモソース
-python3 mac/hls_push.py
+uv run python mac/hls_push.py
 
 #    実HLSストリームの場合:
-HLS_URL=https://example.invalid/path/live.m3u8 python3 mac/hls_push.py
+HLS_URL=https://example.invalid/path/live.m3u8 uv run python mac/hls_push.py
 
 # 画面は約30秒以内にライブ映像へ切り替わります (最初のGOPがバッファを満たすまで)。
 ```
@@ -86,7 +87,7 @@ HLS_URL=https://example.invalid/path/live.m3u8 python3 mac/hls_push.py
 ### 通常モードへの復帰
 
 ```bash
-MEURAL_GALLERY_ID=<ギャラリーid> python3 mac/restore_gallery.py
+MEURAL_GALLERY_ID=<ギャラリーid> uv run python mac/restore_gallery.py
 ```
 
 watchdogとplayerを停止 (端末側コマンド) した後、ローカルAPI
@@ -116,7 +117,7 @@ watchdogとplayerを停止 (端末側コマンド) した後、ローカルAPI
 スタールします。docs/NOTES.md参照)。`fbdev2` は1080pフレームを `/dev/fb0` に
 直書きするため、ソースは **正確に1920x1080** である必要があります。
 
-**エンコーダ (`mac/hls_push.py`)。** x264 `veryfast`、2Mbps、15fps、GOP 30、
+**エンコーダ (`mac/hls_push.py`)。** x264 `superfast`、2Mbps、15fps、GOP 30、
 **音声なし** (`-an`)、セグメント境界で連続タイムスタンプ。pusherは出力
 ディレクトリを監視し、*書込み中でない* closedセグメントのみをPOSTし、
 失敗時はリトライします。デバッグ用の最小HLSプレイリスト配信も持ちます。
@@ -132,8 +133,8 @@ watchdogとplayerを停止 (端末側コマンド) した後、ローカルAPI
 再起動後は:
 
 ```bash
-python3 mac/deploy_live.py     # ファイル再投入 + サービス再起動
-python3 mac/hls_push.py        # Mac pusher (実HLSなら HLS_URL=...)
+uv run python mac/deploy_live.py     # ファイル再投入 + サービス再起動
+uv run python mac/hls_push.py        # Mac pusher (実HLSなら HLS_URL=...)
 ```
 
 端末内で再起動後も残したい場合は `/home/meural/` 等の永続領域にコピーして
@@ -162,3 +163,34 @@ python3 mac/hls_push.py        # Mac pusher (実HLSなら HLS_URL=...)
 ## License
 
 MIT
+
+## 開発・検証
+
+ホスト側は `pyproject.toml` と `uv.lock` で管理します。端末側の
+`ingest.py` は標準ライブラリのみを使用し、Python 3.5の構文互換性を
+テストしています。端末へのuvや追加パッケージのインストールは不要です。
+
+```bash
+uv sync --locked
+uv run ruff check mac device tests
+uv run ruff format --check mac device tests
+uv run mypy
+uv run python -m unittest discover -s tests -v
+```
+
+入力がH.264/yuv420p・1920x1080・15fps・2秒間隔のキーフレームである場合
+（meural-signageの標準横画面出力など）は、`HLS_URL` と同時に
+`HLS_COPY=1` を設定すると二重エンコードを省略できます。それ以外は既定の
+再エンコードを使用してください。
+
+pusherは実行ごとの一時ディレクトリとセッションIDを使用し、送信失敗した
+セグメントから順に再試行します。プレイリストには送信成功済みのものだけを
+掲載し、未送信の閉じたセグメントが30個を超えると停止します。端末側は
+直近15セグメント、最大8視聴クライアント、各8個の待機キューに制限します。
+セグメント上限は4MiB、プレイリスト上限は64KiBです。遅いクライアントは
+切断し、watchdogに再接続させます。再送は重複再生せず、`/seg` の任意の
+`session` パラメータが変わると旧状態を破棄します。未知のHTTPパスは404を返します。
+
+`postman/simulations/ingest-retry.sim.yaml` は実装の契約に基づくローカル
+検証用モックです。最初の6回の送信を503にする条件を、実際のencoder/pusherで
+検証できます。実行手順は `scripts/check_retry.py` を参照してください。

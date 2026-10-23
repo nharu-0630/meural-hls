@@ -5,23 +5,26 @@ Environment:
   MEURAL_HOST        device IP (must be set / default placeholder)
   MEURAL_GALLERY_ID  gallery id to switch back to (see /remote/get_galleries_json)
 """
+
 import os
 import sys
 import time
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from rtc_shell2 import rtc   # noqa: E402
-import meural_api            # noqa: E402
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from mac import meural_api  # noqa: E402
+from mac.rtc_shell2 import rtc  # noqa: E402
 
 GALLERY_ID = os.environ.get("MEURAL_GALLERY_ID", "")
 
 
-def main():
+def main() -> None:
     if not GALLERY_ID:
         print("Set MEURAL_GALLERY_ID (list ids with this one-liner):")
-        print("  python3 -c 'import sys; sys.path.insert(0,\"mac\");"
-              "import meural_api as m;"
-              "[print(g) for g in m.galleries()]'")
+        print(
+            '  python3 -c \'import sys; sys.path.insert(0,"mac");'
+            "from mac import meural_api as m;"
+            "[print(g) for g in m.galleries()]'"
+        )
         sys.exit(1)
 
     print("stopping watchdog ...")

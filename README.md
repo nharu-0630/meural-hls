@@ -51,20 +51,21 @@ To use your own gallery id, set `MEURAL_GALLERY_ID` (see `/remote/get_galleries_
 
 Requirements:
 
-- **Mac** (or any Linux/BSD host): Python 3, `ffmpeg` with libx264
+- **Mac** (or any Linux/BSD host): Python 3.11+, [uv](https://docs.astral.sh/uv/), `ffmpeg` with libx264
 - **Device**: Meural Canvas MC321 on the same LAN, running stock firmware (local `http://<device>/remote/...` API)
 
 ```bash
+uv sync --locked
 export MEURAL_HOST=<your device IP>
 
-# 1) One-time install (pushes ~4 KB of python into device RAM, starts services)
-python3 mac/deploy_live.py
+# 1) One-time install (pushes the Python server into device RAM, starts services)
+uv run python mac/deploy_live.py
 
 # 2) Start the Mac pusher — built-in animated demo source
-python3 mac/hls_push.py
+uv run python mac/hls_push.py
 
 #    ...or with a real HLS stream:
-HLS_URL=https://example.invalid/path/live.m3u8 python3 mac/hls_push.py
+HLS_URL=https://example.invalid/path/live.m3u8 uv run python mac/hls_push.py
 
 # Screen switches to live video within ~30 s (first GOP must fill the buffer).
 ```
@@ -88,7 +89,7 @@ HLS_URL=https://example.invalid/path/live.m3u8 python3 mac/hls_push.py
 ### Restoring normal mode
 
 ```bash
-MEURAL_GALLERY_ID=<your gallery id> python3 mac/restore_gallery.py
+MEURAL_GALLERY_ID=<your gallery id> uv run python mac/restore_gallery.py
 ```
 
 Stops the watchdog + player (device-side commands), then calls the local
@@ -119,7 +120,7 @@ plays the loopback stream with:
 bitrates (see docs/NOTES.md). `fbdev2` blits 1080p frames directly into
 `/dev/fb0`; the source must therefore be exactly 1920x1080.
 
-**Encoder (`mac/hls_push.py`).** x264 `veryfast`, 2 Mbps, 15 fps, GOP 30,
+**Encoder (`mac/hls_push.py`).** x264 `superfast`, 2 Mbps, 15 fps, GOP 30,
 **video-only** (`-an`) and continuous timestamps across segment boundaries.
 The pusher watches the output directory, POSTs every *closed* segment
 (never the one being written), retries on failure, and also serves a minimal
@@ -136,8 +137,8 @@ Device-side components are intentionally RAM-only. This repository is the
 canonical backup — after any reboot:
 
 ```bash
-python3 mac/deploy_live.py     # re-pushes files and restarts services
-python3 mac/hls_push.py        # Mac pusher (`HLS_URL=...` for a real stream)
+uv run python mac/deploy_live.py     # re-pushes files and restarts services
+uv run python mac/hls_push.py        # Mac pusher (`HLS_URL=...` for a real stream)
 ```
 
 If you prefer the components to survive reboots on-device, copy them to a
@@ -167,3 +168,36 @@ and for what you display on it. Use at your own risk.
 ## License
 
 MIT
+
+## Development and checks
+
+The host scripts use uv (`pyproject.toml` and `uv.lock`). The standalone device
+server uses only the standard library and retains Python 3.5 syntax; uv and
+third-party packages are not installed on the frame.
+
+```bash
+uv sync --locked
+uv run ruff check mac device tests
+uv run ruff format --check mac device tests
+uv run mypy
+uv run python -m unittest discover -s tests -v
+```
+
+For an already compatible H.264/yuv420p, 1920x1080, 15 fps source with
+2-second keyframes (such as meural-signage's landscape stream), set
+`HLS_COPY=1` alongside `HLS_URL` to remux without decoding and encoding a second
+time. Keep the default transcoding for other sources.
+
+Each pusher run uses its own temporary directory and session ID. Failed uploads
+are retried before later segments; the debug playlist lists only confirmed
+uploads. The pusher stops if more than 30 closed segments accumulate. The
+device keeps at most 15 segments, eight live viewers and eight queued segments
+per viewer, accepts segments up to 4 MiB and playlists up to 64 KiB, and disconnects
+slow viewers so the watchdog can reconnect. Repeated sequence numbers are
+idempotent. The optional `session` query parameter on `/seg` resets old state
+when a new producer starts. Unknown HTTP paths return 404.
+
+A local Postman simulation in `postman/simulations/ingest-retry.sim.yaml` models
+the ingest upload contract from `device/ingest.py`, including six initial 503s.
+It requires no cloud workspace. See `scripts/check_retry.py` to run the real
+encoder/pusher against it.

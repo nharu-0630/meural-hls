@@ -1,0 +1,7 @@
+version: 1
+name: meural-ingest
+interceptRequests: true
+scenarios:
+  - name: default
+    default: true
+    path: default.js

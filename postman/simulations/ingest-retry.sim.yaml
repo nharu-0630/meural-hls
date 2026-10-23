@@ -1,0 +1,5 @@
+simulation: meural-ingest-retry
+routing: path
+mocks:
+  - routeKey: ingest
+    path: ../mocks/ingest/config.yaml
