@@ -2,7 +2,8 @@ name: Checks
 on: [push, pull_request]
 jobs:
   python:
-    runs-on: ubuntu-latest
+    if: github.actor_id == '8305330' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, Linux, X64, shared-ci]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
